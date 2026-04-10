@@ -195,6 +195,41 @@ class EngagementAnalysis:
 
         return {"inertias": inertias, "optimal_k": optimal_k}
 
+    # ── 2.3b  Cluster distribution (user share & traffic share) ──────────────
+
+    def cluster_distribution(self) -> pd.DataFrame:
+        """Return per-cluster user count, traffic share, and session share."""
+        if self._cluster_col not in self.eng.columns:
+            self.run_kmeans()
+        available = [m for m in self.METRICS if m in self.eng.columns]
+        grp = self.eng.groupby(self._cluster_col)
+        dist = pd.DataFrame({
+            "user_count": grp.size(),
+        })
+        for metric in available:
+            dist[f"{metric}_total"] = grp[metric].sum()
+        dist = dist.reset_index()
+        dist["user_pct"] = dist["user_count"] / dist["user_count"].sum() * 100
+        for metric in available:
+            col = f"{metric}_total"
+            dist[f"{metric}_pct"] = dist[col] / dist[col].sum() * 100
+        return dist
+
+    # ── 2.3c  Classify clusters ───────────────────────────────────────────────
+
+    def classify_clusters(self) -> dict[int, str]:
+        """Return a mapping {cluster_id: label} of Low / Medium / High engagement."""
+        if self._cluster_col not in self.eng.columns:
+            self.run_kmeans()
+        # Rank clusters by their composite mean (average of all three normalised metrics)
+        available = [m for m in self.METRICS if m in self.eng.columns]
+        cluster_means = (
+            self.eng.groupby(self._cluster_col)[available].mean().mean(axis=1)
+        )
+        ranked = cluster_means.sort_values()
+        labels = ["Low", "Medium", "High"]
+        return {int(cluster): labels[rank] for rank, cluster in enumerate(ranked.index)}
+
     # ── Private helpers ───────────────────────────────────────────────────────
 
     def _get_feature_matrix(self) -> np.ndarray:

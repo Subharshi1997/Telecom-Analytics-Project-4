@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import pandas as pd
 from sqlalchemy import create_engine, text
+from urllib.parse import quote_plus
 from loguru import logger
 
 import sys
@@ -19,8 +20,12 @@ class MySQLConnector:
 
     def __init__(self) -> None:
         cfg = config.MYSQL_CONFIG
+        # quote_plus encodes special URL characters (e.g. # → %23, @ → %40)
+        # Without this, passwords like "Password123#" silently truncate the URL.
+        self._cfg = cfg
+        self._password = quote_plus(cfg["password"])
         conn_str = (
-            f"mysql+mysqlconnector://{cfg['user']}:{cfg['password']}"
+            f"mysql+mysqlconnector://{cfg['user']}:{self._password}"
             f"@{cfg['host']}:{cfg['port']}/{cfg['database']}"
         )
         self._engine = create_engine(conn_str, echo=False)
@@ -42,13 +47,9 @@ class MySQLConnector:
         table_name : target table name
         if_exists  : 'replace' | 'append' | 'fail'
         """
-        try:
-            df.to_sql(table_name, con=self._engine, if_exists=if_exists, index=False)
-            logger.success(f"Exported {len(df):,} rows to table `{table_name}`")
-            return True
-        except Exception as exc:
-            logger.error(f"MySQL export failed: {exc}")
-            return False
+        df.to_sql(table_name, con=self._engine, if_exists=if_exists, index=False)
+        logger.success(f"Exported {len(df):,} rows to table `{table_name}`")
+        return True
 
     def read_table(self, table_name: str) -> pd.DataFrame:
         """Read an entire table into a dataframe."""
@@ -64,17 +65,16 @@ class MySQLConnector:
 
     def _ensure_database(self) -> None:
         """Create the database if it doesn't exist (best-effort)."""
-        cfg = config.MYSQL_CONFIG
-        base_conn_str = (
-            f"mysql+mysqlconnector://{cfg['user']}:{cfg['password']}"
-            f"@{cfg['host']}:{cfg['port']}"
-        )
         try:
+            base_conn_str = (
+                f"mysql+mysqlconnector://{self._cfg['user']}:{self._password}"
+                f"@{self._cfg['host']}:{self._cfg['port']}"
+            )
             base_engine = create_engine(base_conn_str, echo=False)
             with base_engine.connect() as conn:
                 conn.execute(
-                    text(f"CREATE DATABASE IF NOT EXISTS `{cfg['database']}`")
+                    text(f"CREATE DATABASE IF NOT EXISTS `{self._cfg['database']}`")
                 )
-            logger.debug(f"Database `{cfg['database']}` ensured.")
+            logger.debug(f"Database `{self._cfg['database']}` ensured.")
         except Exception as exc:
             logger.warning(f"Could not ensure database: {exc}")

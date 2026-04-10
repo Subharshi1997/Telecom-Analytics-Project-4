@@ -7,41 +7,35 @@ build/
 .eggs/
 *.egg
 
-# Environment
+# Environment & Credentials
 .env
 venv/
 .venv/
 env/
+.env.example
 
-# Data & artifacts (large files)
-feature_store/*.parquet
-models_artifacts/*.pkl
+# Data & Large Artifacts (Don't upload large datasets)
+feature_store/
+models_artifacts/
 data/*.xlsx
 data/*.csv
+data/*.parquet
 
-# MLflow
+# MLflow (Database and tracking runs)
 mlflow.db
 mlflow_test.db
 mlruns/
 
-# Reports / outputs
+# Reports & Outputs
 reports/*.png
 reports/*.csv
 
-# IDE
+# IDE & Editor files
 .vscode/
 .idea/
-*.iml
+.claude/
+.pytest_cache/
 
-# Jupyter
-.ipynb_checkpoints/
-notebooks/.ipynb_checkpoints/
-
-# Coverage
-.coverage
-coverage.xml
-htmlcov/
-
-# OS
+# OS files
 .DS_Store
 Thumbs.db

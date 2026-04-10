@@ -20,7 +20,7 @@ services:
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=telecom_analytics
       - MYSQL_USER=telecom_user
-      - MYSQL_PASSWORD=telecom_pass
+      - MYSQL_PASSWORD=Password123#
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     depends_on:
       mysql:
@@ -55,9 +55,9 @@ services:
       MYSQL_ROOT_PASSWORD: root_password
       MYSQL_DATABASE: telecom_analytics
       MYSQL_USER: telecom_user
-      MYSQL_PASSWORD: telecom_pass
+      MYSQL_PASSWORD: Password123#
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql

@@ -53,7 +53,7 @@ def render(overview_analysis, raw_df: pd.DataFrame) -> None:
     - **Top manufacturers** (likely Samsung, Huawei, Apple) indicate a diverse
       hardware ecosystem. Optimize app/web assets for the top handset screen sizes.
     - **iPhone users** tend to consume higher data volumes → premium data plan upsell.
-    - **Entry-level handsets** show higher session frequency but lower throughput →
+    - **Entry-level handsets** show higher session frequency but lower throughout →
       consider lightweight app versions and data-saver promotions.
     """)
 
@@ -147,7 +147,7 @@ def render(overview_analysis, raw_df: pd.DataFrame) -> None:
     **Interpretation of Graphical Univariate Analysis:**
     - **Session Duration histogram** — right-skewed distribution confirms most sessions are short; a long tail of heavy users exists. Mean is pulled above median by outliers.
     - **RTT histograms** — DL RTT is more spread than UL RTT. Most users cluster at low latency but a visible tail indicates network congestion for a subset of users.
-    - **Throughput histograms** — extreme right skew in DL throughput; the majority of sessions have near-zero throughput while a small group has very high speeds. Suggests unequal network resource distribution.
+    - **Throughput histograms** — extreme right skew in DL throughout; the majority of sessions have near-zero throughput while a small group has very high speeds. Suggests unequal network resource distribution.
     - **App data box plots** — Gaming and Other DL show the widest IQR and most outliers, confirming they are the most variable and highest-volume applications. Email and Social Media are comparatively uniform.
     - **Manufacturer bar chart** — confirms market concentration among a few manufacturers, guiding device-specific optimisation priorities.
     """)
@@ -273,7 +273,7 @@ def render(overview_analysis, raw_df: pd.DataFrame) -> None:
     st.dataframe(pca_result["loadings"].style.format("{:.4f}"), use_container_width=True)
 
     st.markdown(f"""
-    **PCA Interpretation (4 bullet points):**
+    **PCA Interpretation:**
     - **PC1 ({explained[0]*100:.1f}% variance)** captures the dominant data consumption axis — variables with high loadings on PC1 represent the overall heavy vs. light user dimension across all applications.
     - **PC2 ({explained[1]*100:.1f}% variance)** separates video-streaming services (YouTube, Netflix) from text-based services (Email, Google), revealing two distinct usage archetypes within the user base.
     - The first two components together explain **{(explained[0]+explained[1])*100:.1f}% of total variance**, confirming that app usage behaviour is highly correlated within user groups and can be effectively summarised in two dimensions.

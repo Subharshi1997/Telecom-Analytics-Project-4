@@ -41,8 +41,8 @@ MYSQL_CONFIG = {
     "host": os.getenv("MYSQL_HOST", "localhost"),
     "port": int(os.getenv("MYSQL_PORT", 3306)),
     "database": os.getenv("MYSQL_DATABASE", "telecom_analytics"),
-    "user": os.getenv("MYSQL_USER", "root"),
-    "password": os.getenv("MYSQL_PASSWORD", ""),
+    "user": os.getenv("MYSQL_USER", "telecom_user"),
+    "password": os.getenv("MYSQL_PASSWORD", "Password123#"),
 }
 
 # ── MLflow Configuration ──────────────────────────────────────────────────────

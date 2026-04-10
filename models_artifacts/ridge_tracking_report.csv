@@ -1,2 +1,2 @@
 model_name,run_id,start_time,end_time,source,rmse,mae,r2,cv_rmse,train_duration_sec,params
-ridge,e78ace294f824da68ef54e04bcc8d691,2026-03-31T21:29:37.823311,2026-03-31T21:29:37.872707,ModelTrainer.train_single,2e-06,2e-06,1.0,1e-06,0.049,"{'alpha': 1.0, 'copy_X': True, 'fit_intercept': True, 'max_iter': None, 'positive': False, 'random_state': None, 'solver': 'auto', 'tol': 0.0001}"
+ridge,7f5b3dac53974c479cf202cb2fab457b,2026-04-09T12:18:26.382765,2026-04-09T12:18:26.558234,ModelTrainer.train_single,5e-06,4e-06,1.0,2.6e-05,0.175,"{'alpha': 1.0, 'copy_X': True, 'fit_intercept': True, 'max_iter': None, 'positive': False, 'random_state': None, 'solver': 'auto', 'tol': 0.0001}"

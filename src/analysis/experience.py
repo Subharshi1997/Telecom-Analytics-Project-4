@@ -52,9 +52,9 @@ class ExperienceAnalysis:
     def experience_top_bottom_summary(self) -> dict[str, dict]:
         """Run top_bottom_frequent for TCP, RTT, and Throughput."""
         mapping = {
-            "TCP":        "avg_tcp_retransmission",
-            "RTT":        "avg_rtt_ms",
-            "Throughput": "avg_throughput_kbps",
+            "TCP Retransmission": "avg_tcp_retransmission",
+            "RTT (ms)":           "avg_rtt_ms",
+            "Throughput (kbps)":  "avg_throughput_kbps",
         }
         return {
             label: self.top_bottom_frequent(col)
@@ -62,13 +62,10 @@ class ExperienceAnalysis:
             if col in self.exp.columns
         }
 
-    # ── 3.3a  Throughput Distribution per Handset ─────────────────────────────
+    # ── 3.3a  Throughput per Handset ──────────────────────────────────────────
 
     def throughput_per_handset(self, top_n: int = 10, save: bool = True) -> pd.DataFrame:
-        """
-        Average throughput per handset type.
-        Returns summary dataframe; also saves a horizontal bar chart.
-        """
+        """Average throughput per handset type — top N (best performing)."""
         if "avg_throughput_kbps" not in self.exp.columns:
             raise KeyError("avg_throughput_kbps not in experience data")
         summary = (
@@ -77,9 +74,7 @@ class ExperienceAnalysis:
             .sort_values(ascending=False)
             .head(top_n)
             .reset_index()
-            .rename(columns={"avg_throughput_kbps": "avg_throughput_kbps"})
         )
-
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.barh(summary[config.HANDSET_TYPE_COL], summary["avg_throughput_kbps"],
                 color="steelblue", edgecolor="black")
@@ -94,10 +89,22 @@ class ExperienceAnalysis:
         plt.close(fig)
         return summary
 
+    def throughput_bottom_handsets(self, bottom_n: int = 10) -> pd.DataFrame:
+        """Average throughput per handset type — bottom N (worst performing)."""
+        if "avg_throughput_kbps" not in self.exp.columns:
+            raise KeyError("avg_throughput_kbps not in experience data")
+        return (
+            self.exp.groupby(config.HANDSET_TYPE_COL)["avg_throughput_kbps"]
+            .mean()
+            .sort_values(ascending=True)
+            .head(bottom_n)
+            .reset_index()
+        )
+
     # ── 3.3b  TCP Retransmission per Handset ──────────────────────────────────
 
     def tcp_per_handset(self, top_n: int = 10, save: bool = True) -> pd.DataFrame:
-        """Average TCP retransmission per handset type."""
+        """Average TCP retransmission per handset type — top N (worst = most retrans)."""
         if "avg_tcp_retransmission" not in self.exp.columns:
             raise KeyError("avg_tcp_retransmission not in experience data")
         summary = (
@@ -107,7 +114,6 @@ class ExperienceAnalysis:
             .head(top_n)
             .reset_index()
         )
-
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.barh(summary[config.HANDSET_TYPE_COL], summary["avg_tcp_retransmission"],
                 color="coral", edgecolor="black")
@@ -122,16 +128,22 @@ class ExperienceAnalysis:
         plt.close(fig)
         return summary
 
+    def tcp_best_handsets(self, top_n: int = 10) -> pd.DataFrame:
+        """Average TCP retransmission per handset type — bottom N (best = least retrans)."""
+        if "avg_tcp_retransmission" not in self.exp.columns:
+            raise KeyError("avg_tcp_retransmission not in experience data")
+        return (
+            self.exp.groupby(config.HANDSET_TYPE_COL)["avg_tcp_retransmission"]
+            .mean()
+            .sort_values(ascending=True)
+            .head(top_n)
+            .reset_index()
+        )
+
     # ── 3.4  K-Means (k=3) ───────────────────────────────────────────────────
 
     def run_kmeans(self, k: int = config.EXPERIENCE_K) -> pd.DataFrame:
-        """
-        Cluster users into k experience groups.
-        Cluster descriptions:
-          0 – Good Experience:  low TCP retrans, low RTT, high throughput
-          1 – Average Experience: mid-range metrics
-          2 – Poor Experience:  high TCP retrans, high RTT, low throughput
-        """
+        """Normalize metrics and cluster users into k experience groups."""
         features = self._get_feature_matrix()
         scaler = StandardScaler()
         scaled = scaler.fit_transform(features)
@@ -146,6 +158,21 @@ class ExperienceAnalysis:
                        f"Cluster sizes: {pd.Series(labels).value_counts().to_dict()}")
         return self.exp
 
+    def classify_clusters(self) -> dict[int, str]:
+        """
+        Return {cluster_id: label} using data-driven ranking on TCP retransmission.
+        Lowest TCP  → 'Good'
+        Middle TCP  → 'Average'
+        Highest TCP → 'Poor'
+        TCP is the primary quality signal: high retransmission = packet loss = bad experience.
+        """
+        if self._cluster_col not in self.exp.columns:
+            self.run_kmeans()
+        tcp_means = self.exp.groupby(self._cluster_col)["avg_tcp_retransmission"].mean()
+        ranked = tcp_means.sort_values(ascending=True)
+        labels = ["Good", "Average", "Poor"]
+        return {int(cluster): labels[rank] for rank, cluster in enumerate(ranked.index)}
+
     def cluster_summary(self) -> pd.DataFrame:
         """Mean experience metrics per cluster."""
         if self._cluster_col not in self.exp.columns:
@@ -156,6 +183,31 @@ class ExperienceAnalysis:
             .mean()
             .reset_index()
         )
+
+    def cluster_statistics(self) -> pd.DataFrame:
+        """Min, max, mean, total (non-normalized) metrics per cluster."""
+        if self._cluster_col not in self.exp.columns:
+            self.run_kmeans()
+        available = [c for c in self.NUMERIC_EXP_COLS if c in self.exp.columns]
+        stats = (
+            self.exp.groupby(self._cluster_col)[available]
+            .agg(["min", "max", "mean", "sum"])
+        )
+        stats.columns = ["_".join(c) for c in stats.columns]
+        return stats.reset_index()
+
+    def cluster_distribution(self) -> pd.DataFrame:
+        """Per-cluster user count, percentage share, and mean metrics."""
+        if self._cluster_col not in self.exp.columns:
+            self.run_kmeans()
+        available = [c for c in self.NUMERIC_EXP_COLS if c in self.exp.columns]
+        grp = self.exp.groupby(self._cluster_col)
+        dist = pd.DataFrame({"user_count": grp.size()})
+        for metric in available:
+            dist[f"{metric}_mean"] = grp[metric].mean()
+        dist = dist.reset_index()
+        dist["user_pct"] = dist["user_count"] / dist["user_count"].sum() * 100
+        return dist
 
     def plot_experience_clusters(self, save: bool = True) -> plt.Figure:
         """Parallel coordinates / box plots of experience metrics by cluster."""
